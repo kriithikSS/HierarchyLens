@@ -4,8 +4,9 @@ A REST API that processes hierarchical node relationships and returns structured
 
 ## Live URLs
 
-- **API**: `https://srm-bfhl-api.onrender.com/bfhl`
-- **Frontend**: `https://srm-bfhl.netlify.app`
+- **API**: `https://hierarchylens-api.onrender.com/bfhl`
+- **Frontend**: `https://hierarchylens-api.onrender.com`
+- **GitHub**: `https://github.com/kriithikSS/HierarchyLens`
 
 ## Stack
 
