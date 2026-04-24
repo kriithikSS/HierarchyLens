@@ -1,235 +1,154 @@
-/* ═══════════════════════════════════════════════════
-   BFHL Analyzer — App Logic
-   ═══════════════════════════════════════════════════ */
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:3001'
+  : '';
 
-// If frontend is served by the same server (Express), use relative path.
-// Otherwise (e.g., Netlify), point to the deployed API.
-const API_BASE = (window.location.port === '3001' || window.location.hostname !== 'localhost' && !window.location.hostname.includes('netlify'))
-  ? ''   // Same-origin: relative URL works
-  : 'https://srm-bfhl-api.onrender.com'; // Replace with your actual Render URL
-
-let lastResponse = null;
-
-// ── Example Data ─────────────────────────────────────────────────────────────
 function loadExample() {
   document.getElementById('nodeInput').value =
-    `A->B\nA->C\nB->D\nC->E\nE->F\nX->Y\nY->Z\nZ->X\nP->Q\nQ->R\nG->H\nG->H\nG->I\nhello\n1->2\nA->`;
+    'A->B\nA->C\nB->D\nC->E\nE->F\nX->Y\nY->Z\nZ->X\nP->Q\nQ->R\nG->H\nG->H\nG->I\nhello\n1->2\nA->';
 }
 
-function clearInput() {
+function clearAll() {
   document.getElementById('nodeInput').value = '';
-  document.getElementById('errorBanner').classList.add('hidden');
-  document.getElementById('resultsPanel').classList.add('hidden');
-  document.getElementById('emptyState').classList.remove('hidden');
-  lastResponse = null;
+  document.getElementById('results').classList.add('hidden');
+  document.getElementById('errorMsg').classList.add('hidden');
 }
 
-// ── Analyze ──────────────────────────────────────────────────────────────────
-async function analyze() {
+async function submitData() {
   const raw = document.getElementById('nodeInput').value.trim();
+  const errEl = document.getElementById('errorMsg');
+  errEl.classList.add('hidden');
+
   if (!raw) {
-    showError('Please enter at least one node string.');
+    errEl.textContent = 'Please enter at least one node edge.';
+    errEl.classList.remove('hidden');
     return;
   }
 
-  const data = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-  hideError();
-  showLoading();
+  const data = raw.split('\n').map(l => l).filter(l => l.length > 0);
+
+  document.getElementById('submitBtn').textContent = 'Loading...';
+  document.getElementById('submitBtn').disabled = true;
 
   try {
     const res = await fetch(`${API_BASE}/bfhl`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data }),
+      body: JSON.stringify({ data })
     });
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `HTTP ${res.status}`);
-    }
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
 
     const json = await res.json();
-    lastResponse = json;
     renderResults(json);
   } catch (err) {
-    showError(`API Error: ${err.message}. Make sure the server is running.`);
+    errEl.textContent = 'Error: ' + err.message + '. Make sure the server is running.';
+    errEl.classList.remove('hidden');
   } finally {
-    hideLoading();
+    document.getElementById('submitBtn').textContent = 'Analyze';
+    document.getElementById('submitBtn').disabled = false;
   }
 }
 
-// ── Render ────────────────────────────────────────────────────────────────────
 function renderResults(data) {
-  // Show/hide panels
-  document.getElementById('emptyState').classList.add('hidden');
-  const panel = document.getElementById('resultsPanel');
-  panel.classList.remove('hidden');
-  panel.classList.add('anim-in');
+  document.getElementById('uid').textContent = data.user_id;
+  document.getElementById('email').textContent = data.email_id;
+  document.getElementById('roll').textContent = data.college_roll_number;
 
-  // Summary cards
-  const { summary } = data;
-  document.getElementById('summaryCards').innerHTML = `
-    <div class="summary-card">
-      <span class="card-value">${summary.total_trees}</span>
-      <span class="card-label">Valid Trees</span>
-    </div>
-    <div class="summary-card">
-      <span class="card-value">${summary.total_cycles}</span>
-      <span class="card-label">Cycles</span>
-    </div>
-    <div class="summary-card">
-      <span class="card-value">${summary.largest_tree_root ?? '—'}</span>
-      <span class="card-label">Largest Tree Root</span>
-    </div>
-  `;
-
-  // Identity
-  document.getElementById('identityRow').innerHTML = `
-    <div class="identity-chip">
-      <span class="chip-label">User ID</span>
-      <span class="chip-value">${data.user_id}</span>
-    </div>
-    <div class="identity-chip">
-      <span class="chip-label">Email</span>
-      <span class="chip-value">${data.email_id}</span>
-    </div>
-    <div class="identity-chip">
-      <span class="chip-label">Roll Number</span>
-      <span class="chip-value">${data.college_roll_number}</span>
-    </div>
-  `;
-
-  // Hierarchy count
-  document.getElementById('hierarchyCount').textContent = data.hierarchies.length;
+  document.getElementById('totalTrees').textContent = data.summary.total_trees;
+  document.getElementById('totalCycles').textContent = data.summary.total_cycles;
+  document.getElementById('largestRoot').textContent = data.summary.largest_tree_root || '—';
 
   // Hierarchies
-  const hContainer = document.getElementById('hierarchiesContainer');
-  hContainer.innerHTML = '';
+  const hBox = document.getElementById('hierarchiesBox');
+  hBox.innerHTML = '';
   data.hierarchies.forEach((h, i) => {
-    hContainer.appendChild(buildHierarchyCard(h, i));
+    hBox.appendChild(buildHierarchyCard(h, i));
   });
 
   // Invalid entries
+  const invBox = document.getElementById('invalidBox');
   const invCount = data.invalid_entries.length;
-  document.getElementById('invalidCount').textContent = invCount;
-  const invList = document.getElementById('invalidList');
-  invList.innerHTML = invCount
-    ? data.invalid_entries.map(e => `<span class="tag tag-red">${escHtml(e)}</span>`).join('')
-    : `<span class="tag-empty">None</span>`;
+  document.getElementById('invCount').textContent = invCount;
+  invBox.innerHTML = invCount
+    ? data.invalid_entries.map(e => `<span class="tag invalid">${e}</span>`).join('')
+    : '<span class="none-text">None</span>';
 
-  // Duplicates
+  // Duplicate edges
+  const dupBox = document.getElementById('duplicateBox');
   const dupCount = data.duplicate_edges.length;
-  document.getElementById('duplicateCount').textContent = dupCount;
-  const dupList = document.getElementById('duplicateList');
-  dupList.innerHTML = dupCount
-    ? data.duplicate_edges.map(e => `<span class="tag tag-yellow">${escHtml(e)}</span>`).join('')
-    : `<span class="tag-empty">None</span>`;
+  document.getElementById('dupCount').textContent = dupCount;
+  dupBox.innerHTML = dupCount
+    ? data.duplicate_edges.map(e => `<span class="tag dup">${e}</span>`).join('')
+    : '<span class="none-text">None</span>';
 
   // Raw JSON
-  document.getElementById('rawJSON').textContent = JSON.stringify(data, null, 2);
+  document.getElementById('rawJson').textContent = JSON.stringify(data, null, 2);
+
+  document.getElementById('results').classList.remove('hidden');
 }
 
 function buildHierarchyCard(h, idx) {
   const isCycle = !!h.has_cycle;
   const card = document.createElement('div');
-  card.className = `hierarchy-card${isCycle ? ' has-cycle' : ''} anim-in`;
-  card.style.animationDelay = `${idx * 60}ms`;
+  card.className = 'hierarchy-card' + (isCycle ? ' cycle' : '');
 
-  const bodyId = `hbody-${idx}`;
+  const bodyId = 'hbody-' + idx;
 
   card.innerHTML = `
-    <div class="hierarchy-header" onclick="toggleHBody('${bodyId}', this)">
-      <div class="root-badge${isCycle ? ' cycle' : ''}">${h.root}</div>
-      <div class="hierarchy-meta">
-        <div class="h-root">Root: <strong>${h.root}</strong></div>
-        <div class="h-sub">${isCycle ? 'Cyclic group' : `${countNodes(h.tree)} nodes`}</div>
+    <div class="hierarchy-header" onclick="toggleBody('${bodyId}', this)">
+      <div class="root-label ${isCycle ? 'cycle' : ''}">${h.root}</div>
+      <div class="h-info">
+        <strong>Root: ${h.root}</strong>
+        <span>${isCycle ? 'Contains a cycle' : countNodes(h.tree) + ' node(s)'}</span>
       </div>
       ${isCycle
-        ? `<span class="cycle-tag">⟳ Cycle</span>`
-        : `<span class="depth-tag">Depth ${h.depth}</span>`}
-      <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
+        ? '<span class="badge cycle">⟳ Cycle</span>'
+        : `<span class="badge depth">Depth: ${h.depth}</span>`}
+      <span>▾</span>
     </div>
     <div class="hierarchy-body" id="${bodyId}">
       ${isCycle
-        ? `<p style="color:var(--text-muted);font-size:13px;">This group contains a cycle — tree structure cannot be rendered.</p>`
-        : `<div class="tree-visual">${renderTreeLines(h.tree)}</div>`}
+        ? '<em style="color:#888">Cyclic group — tree cannot be displayed.</em>'
+        : renderTree(h.tree, 0)}
     </div>
   `;
-
   return card;
 }
 
-function toggleHBody(id, header) {
+function toggleBody(id, header) {
   const body = document.getElementById(id);
-  const chevron = header.querySelector('.chevron');
-  const isHidden = body.style.display === 'none';
-  body.style.display = isHidden ? 'block' : 'none';
-  chevron.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(-90deg)';
+  const arrow = header.querySelector('span:last-child');
+  if (body.style.display === 'none') {
+    body.style.display = 'block';
+    arrow.textContent = '▾';
+  } else {
+    body.style.display = 'none';
+    arrow.textContent = '▸';
+  }
 }
 
-// Render a nested tree object as indented node labels
-function renderTreeLines(treeObj, depth = 0) {
+function renderTree(obj, depth) {
   let html = '';
-  for (const [node, children] of Object.entries(treeObj)) {
-    const indent = '&nbsp;'.repeat(depth * 4);
-    const connector = depth > 0 ? '<span class="tree-connector">└─&nbsp;</span>' : '';
-    html += `<div class="tree-node" style="padding-left:${depth * 16}px">
-      ${connector}<span class="tree-node-label">${node}</span>
+  for (const [node, children] of Object.entries(obj)) {
+    const indent = depth * 20;
+    html += `<div class="tree-line" style="padding-left:${indent}px">
+      ${depth > 0 ? '<span class="connector">└─</span>' : ''}
+      <span class="node-box">${node}</span>
     </div>`;
-    html += renderTreeLines(children, depth + 1);
+    html += renderTree(children, depth + 1);
   }
   return html;
 }
 
-function countNodes(treeObj) {
+function countNodes(obj) {
   let count = 0;
-  function walk(obj) {
-    for (const [, children] of Object.entries(obj)) {
-      count++;
-      walk(children);
-    }
+  function walk(o) {
+    for (const [, v] of Object.entries(o)) { count++; walk(v); }
   }
-  walk(treeObj);
+  walk(obj);
   return count;
 }
 
-// ── Utilities ─────────────────────────────────────────────────────────────────
-function copyJSON() {
-  if (!lastResponse) return;
-  navigator.clipboard.writeText(JSON.stringify(lastResponse, null, 2))
-    .then(() => {
-      const btn = event.currentTarget;
-      const orig = btn.innerHTML;
-      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8l3 3 7-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Copied!`;
-      btn.style.color = 'var(--green)';
-      setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 2000);
-    });
-}
-
-function showError(msg) {
-  const banner = document.getElementById('errorBanner');
-  document.getElementById('errorText').textContent = msg;
-  banner.classList.remove('hidden');
-}
-function hideError() {
-  document.getElementById('errorBanner').classList.add('hidden');
-}
-function showLoading() {
-  document.getElementById('loadingOverlay').classList.remove('hidden');
-}
-function hideLoading() {
-  document.getElementById('loadingOverlay').classList.add('hidden');
-}
-function escHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
-
-// ── Keyboard shortcut ─────────────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
-  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') analyze();
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') submitData();
 });

@@ -3,172 +3,76 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BFHL Tree Analyzer | SRM Challenge</title>
-  <meta name="description" content="Analyze hierarchical node relationships with the BFHL API. Enter node strings to explore tree structures, detect cycles, and get rich insights." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <title>BFHL - Node Hierarchy Analyzer</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="bg-orbs">
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-    <div class="orb orb-3"></div>
-  </div>
 
-  <header class="header">
-    <div class="header-inner">
-      <div class="logo">
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <circle cx="16" cy="16" r="16" fill="url(#grad1)"/>
-          <path d="M10 10 L16 7 L22 10 L22 16 L16 22 L10 16 Z" stroke="white" stroke-width="1.5" fill="none"/>
-          <circle cx="16" cy="7" r="2" fill="white"/>
-          <circle cx="22" cy="10" r="2" fill="white"/>
-          <circle cx="22" cy="16" r="2" fill="white"/>
-          <circle cx="16" cy="22" r="2" fill="white"/>
-          <circle cx="10" cy="16" r="2" fill="white"/>
-          <circle cx="10" cy="10" r="2" fill="white"/>
-          <defs>
-            <linearGradient id="grad1" x1="0" y1="0" x2="32" y2="32">
-              <stop offset="0%" stop-color="#6366f1"/>
-              <stop offset="100%" stop-color="#8b5cf6"/>
-            </linearGradient>
-          </defs>
-        </svg>
-        <span>BFHL Analyzer</span>
+  <div class="container">
+    <h1>BFHL Node Hierarchy Analyzer</h1>
+    <p class="subtitle">SRM Full Stack Engineering Challenge — Round 1</p>
+
+    <div class="form-section">
+      <label for="nodeInput"><strong>Enter node edges (one per line):</strong></label>
+      <textarea id="nodeInput" rows="10" placeholder="A->B&#10;A->C&#10;B->D&#10;X->Y&#10;Y->Z&#10;Z->X"></textarea>
+
+      <div class="btn-row">
+        <button id="submitBtn" onclick="submitData()">Analyze</button>
+        <button class="secondary" onclick="loadExample()">Load Example</button>
+        <button class="secondary" onclick="clearAll()">Clear</button>
       </div>
-      <div class="header-badge">SRM Full Stack Challenge</div>
+
+      <p id="errorMsg" class="error hidden"></p>
     </div>
-  </header>
 
-  <main class="main">
-    <section class="hero">
-      <h1 class="hero-title">Hierarchical Tree <span class="gradient-text">Analyzer</span></h1>
-      <p class="hero-subtitle">Parse node relationships, detect cycles, and visualize tree structures with instant insights.</p>
-    </section>
+    <div id="results" class="hidden">
 
-    <div class="workspace">
-      <!-- Input Panel -->
-      <div class="panel input-panel">
-        <div class="panel-header">
-          <h2>Node Input</h2>
-          <span class="panel-tag">POST /bfhl</span>
+      <hr />
+
+      <h2>Results</h2>
+
+      <div class="identity-box">
+        <table>
+          <tr><td>User ID</td><td id="uid"></td></tr>
+          <tr><td>Email</td><td id="email"></td></tr>
+          <tr><td>Roll Number</td><td id="roll"></td></tr>
+        </table>
+      </div>
+
+      <h3>Summary</h3>
+      <div class="summary-row">
+        <div class="summary-card">
+          <div id="totalTrees" class="card-val">0</div>
+          <div class="card-lbl">Valid Trees</div>
         </div>
-
-        <div class="input-hints">
-          <span class="hint">Format: <code>X->Y</code></span>
-          <span class="hint">One per line</span>
-          <span class="hint">A–Z only</span>
+        <div class="summary-card">
+          <div id="totalCycles" class="card-val">0</div>
+          <div class="card-lbl">Cycles</div>
         </div>
-
-        <textarea
-          id="nodeInput"
-          class="node-textarea"
-          placeholder="A->B&#10;A->C&#10;B->D&#10;X->Y&#10;Y->Z&#10;Z->X&#10;P->Q&#10;hello&#10;1->2"
-          spellcheck="false"
-        ></textarea>
-
-        <div class="input-actions">
-          <button id="loadExample" class="btn btn-ghost" onclick="loadExample()">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8a6 6 0 1 1 12 0A6 6 0 0 1 2 8z" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-            Load Example
-          </button>
-          <button id="clearBtn" class="btn btn-ghost" onclick="clearInput()">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-            Clear
-          </button>
-          <button id="analyzeBtn" class="btn btn-primary" onclick="analyze()">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8l3 3 7-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Analyze
-          </button>
-        </div>
-
-        <div id="errorBanner" class="error-banner hidden">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3M8 11v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-          <span id="errorText"></span>
+        <div class="summary-card">
+          <div id="largestRoot" class="card-val">—</div>
+          <div class="card-lbl">Largest Tree Root</div>
         </div>
       </div>
 
-      <!-- Results Panel -->
-      <div id="resultsPanel" class="panel results-panel hidden">
-        <div class="panel-header">
-          <h2>Analysis Results</h2>
-          <button class="btn btn-ghost btn-sm" onclick="copyJSON()">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M3 11V3h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-            Copy JSON
-          </button>
+      <h3>Hierarchies</h3>
+      <div id="hierarchiesBox"></div>
+
+      <div class="two-col">
+        <div>
+          <h3>Invalid Entries <span id="invCount" class="count-badge"></span></h3>
+          <div id="invalidBox" class="tag-box"></div>
         </div>
-
-        <!-- Summary Cards -->
-        <div id="summaryCards" class="summary-cards"></div>
-
-        <!-- Identity -->
-        <div class="section-label">Identity</div>
-        <div id="identityRow" class="identity-row"></div>
-
-        <!-- Hierarchies -->
-        <div class="section-label">
-          Hierarchies
-          <span id="hierarchyCount" class="badge"></span>
+        <div>
+          <h3>Duplicate Edges <span id="dupCount" class="count-badge"></span></h3>
+          <div id="duplicateBox" class="tag-box"></div>
         </div>
-        <div id="hierarchiesContainer" class="hierarchies-container"></div>
-
-        <!-- Invalid & Duplicates -->
-        <div class="two-col">
-          <div>
-            <div class="section-label">
-              Invalid Entries
-              <span id="invalidCount" class="badge badge-red"></span>
-            </div>
-            <div id="invalidList" class="tag-list"></div>
-          </div>
-          <div>
-            <div class="section-label">
-              Duplicate Edges
-              <span id="duplicateCount" class="badge badge-yellow"></span>
-            </div>
-            <div id="duplicateList" class="tag-list"></div>
-          </div>
-        </div>
-
-        <!-- Raw JSON -->
-        <details class="raw-details">
-          <summary>Raw JSON Response</summary>
-          <pre id="rawJSON" class="raw-json"></pre>
-        </details>
       </div>
 
-      <!-- Empty State -->
-      <div id="emptyState" class="panel empty-state">
-        <div class="empty-icon">
-          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-            <circle cx="24" cy="24" r="22" stroke="url(#eg)" stroke-width="2" stroke-dasharray="4 4"/>
-            <circle cx="24" cy="14" r="4" fill="url(#eg)"/>
-            <circle cx="14" cy="32" r="4" fill="url(#eg)"/>
-            <circle cx="34" cy="32" r="4" fill="url(#eg)"/>
-            <line x1="24" y1="18" x2="14" y2="28" stroke="url(#eg)" stroke-width="2" stroke-linecap="round"/>
-            <line x1="24" y1="18" x2="34" y2="28" stroke="url(#eg)" stroke-width="2" stroke-linecap="round"/>
-            <defs>
-              <linearGradient id="eg" x1="0" y1="0" x2="48" y2="48">
-                <stop offset="0%" stop-color="#6366f1"/>
-                <stop offset="100%" stop-color="#8b5cf6"/>
-              </linearGradient>
-            </defs>
-          </svg>
-        </div>
-        <p class="empty-title">Ready to Analyze</p>
-        <p class="empty-sub">Enter node relationships on the left and hit <strong>Analyze</strong> to see tree structures, cycles, and more.</p>
-      </div>
+      <h3>Raw JSON</h3>
+      <pre id="rawJson" class="json-box"></pre>
+
     </div>
-  </main>
-
-  <footer class="footer">
-    <p>SRM Full Stack Engineering Challenge &nbsp;·&nbsp; Round 1</p>
-  </footer>
-
-  <div id="loadingOverlay" class="loading-overlay hidden">
-    <div class="spinner"></div>
   </div>
 
   <script src="app.js"></script>
