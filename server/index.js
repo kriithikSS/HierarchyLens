@@ -11,9 +11,9 @@ const clientDir = path.join(__dirname, '..', 'client');
 app.use(express.static(clientDir));
 
 // ─── Identity ────────────────────────────────────────────────────────────────
-const USER_ID = 'krishnavamsi_24042000';
-const EMAIL_ID = 'krishnavamsi@srmist.edu.in';
-const COLLEGE_ROLL_NUMBER = 'RA2211003010001';
+const USER_ID = 'kriithikSS_11052005';
+const EMAIL_ID = 'ks7872@srmist.edu.in';
+const COLLEGE_ROLL_NUMBER = 'RA2311026010779';
 
 // ─── Validation ──────────────────────────────────────────────────────────────
 function validateEntry(raw) {
