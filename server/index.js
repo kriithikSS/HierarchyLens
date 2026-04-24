@@ -47,12 +47,12 @@ function buildGraph(edges) {
   const nodes = new Set();
 
   for (const [u, v] of edges) {
-    nodes.add(u);
-    nodes.add(v);
     if (!firstParent.has(v)) {
       firstParent.set(v, u);
       if (!adj.has(u)) adj.set(u, []);
       adj.get(u).push(v);
+      nodes.add(u);
+      nodes.add(v);
     }
   }
 

@@ -98,7 +98,7 @@ async function run() {
 
   const diamond = await post(['A->D','B->D','A->E']);
   check('Diamond A->D, B->D: D parent = A', diamond.body.hierarchies.some(h => h.root === 'A' && h.tree.A?.D !== undefined));
-  check('Diamond: B->D discarded, B is standalone', diamond.body.hierarchies.some(h => h.root === 'B'));
+  check('Diamond: B->D discarded, B does NOT appear as a hierarchy', !diamond.body.hierarchies.some(h => h.root === 'B'));
 
   const pureCycle = await post(['Y->Z','Z->X','X->Y']);
   const cycleH = pureCycle.body.hierarchies[0];
